@@ -8,7 +8,7 @@
 # Features:
 #   - Installs Temurin JDK 21 if no Java is present
 #   - Installs latest stable Clojure
-#   - Configures either VSCode or Emacs as the development environment
+#   - Configures either VSCode or Vim as the development environment
 #   - Sets up deps-new template for project creation
 #   - Installs Sean Corfield's dot-clojure configuration
 #
@@ -34,7 +34,7 @@
 #   2. Install Clojure to ~/.clojure (customizable)
 #   3. Set up your preferred editor:
 #      - For VSCode: installs Calva and Joyride extensions + configurations
-#      - For Emacs: installs Spacemacs with Practicalli configuration
+#      - For Vim: installs a Vim setup including vim-iced
 #   4. Configure deps-new template for project creation
 #
 # Editor Setup Details:
@@ -43,9 +43,8 @@
 #   - Configures key bindings and settings
 #   - Sets up Joyride scripts
 #
-#   Emacs:
-#   - Installs Spacemacs
-#   - Sets up Practicalli's configuration
+#   Vim:
+#   - Installs https://github.com/ai-mindset/vimrc/blob/vim-iced/vimrcs/basic.vim
 #
 # Configuration:
 #   - The script will prompt for:
@@ -58,12 +57,13 @@
 #
 # Note: This script creates backups of existing configurations before making changes:
 #   - VSCode: .config/Code/User/*.json.bak
-#   - Emacs: .emacs.d.bak
+#   - Vim: .vim.bak
 #
-# Author: mygithub
+# Author: ai-mindset
 # License: MIT
-# Repository: https://github.com/mygithub/installer
+# Repository: https://github.com/mindset/clj-installer
 
+## 1. Check if the distribution is Debian or RHEL based
 if command -v dnf &>/dev/null; then
     PKG_MANAGER="dnf"
 elif command -v apt &>/dev/null; then
@@ -73,8 +73,8 @@ else
     exit 1
 fi
 
-# Check if the latest Adoptium Temurin LTS JDK is installed
-if ! command -v java &>/dev/null; then
+## 2. Check if a JDK is installed. If it's not, install the latest Adoptium Temurin LTS JDK
+if ! command -v javac &>/dev/null; then
     case $PKG_MANAGER in
         dnf)
             [[ ! -f /etc/yum.repos.d/adoptium.repo ]] && sudo tee /etc/yum.repos.d/adoptium.repo > /dev/null <<EOF
@@ -100,6 +100,7 @@ apt)
                     esac
 fi
 
+## 3. Check if Clojure is installed, otherwise install the latest version
 if command -v clj >/dev/null 2>&1; then
     echo "Clojure is already installed 👍"
     clj_path=$(which clj)
@@ -144,113 +145,110 @@ else
     echo "Clojure installation complete!"
 fi
 
-echo "\nSetting up development environment..."
 
-# Function definition here
+echo "\nChecking editor setup..."
+
+# Helper function for VSCode extension checks
 is_extension_installed() {
     local extension_id="$1"
     code --list-extensions | grep -q "^${extension_id}$"
     return $?
 }
 
-# Check for VSCode and handle editor setup
-echo "\nChecking development environment..."
-has_vscode=false
+# Function to set up vim-iced and related plugins
+setup_vim_iced() {
+    local vimrc="$HOME/.vimrc"
+    local vim_plug_script="$HOME/.vim/autoload/plug.vim"
+    local vimrc_url="https://raw.githubusercontent.com/ai-mindset/vimrc/vim-iced/vimrcs/basic.vim"
 
-if command -v code &>/dev/null; then
-    has_vscode=true
-    echo "Found VSCode installation"
-fi
-
-# Ask about Emacs installation
-read -r "?Would you like to install Emacs with Spacemacs and Practicalli config? [y/N] " install_emacs
-
-# Setup VSCode if present
-if [[ "$has_vscode" == "true" ]]; then
-    echo "\nSetting up VSCode for Clojure development..."
-
-    # Define VSCode configuration paths
-    vscode_config="$HOME/.config/Code/User"
-
-    # Check if VSCode is properly installed
-    if [[ ! -d "$vscode_config" ]]; then
-        echo "Warning: VSCode config directory not found. Is VSCode installed correctly?"
-        exit 1
+    # Install vim-plug if not present
+    if [[ ! -f "$vim_plug_script" ]]; then
+        echo "Installing vim-plug..."
+        curl -fLo "$vim_plug_script" --create-dirs \
+            https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
     fi
 
-    # Install or verify VSCode extensions
-    for ext in "betterthantomorrow.calva" "betterthantomorrow.joyride"; do
-        if is_extension_installed "$ext"; then
-            echo "$ext extension is already installed"
-        else
-            if ! code --install-extension "$ext"; then
-                echo "Failed to install $ext extension"
-                exit 1
-            fi
-            echo "Installed $ext extension"
-        fi
-    done
+    curl -fLo "$vimrc" "$vimrc_url" || {
+        echo "Failed to download .vimrc" >&2
+        return 1
+    }
+    vim +PlugInstall +qall
 
-    # Setup Joyride scripts directory
-    mkdir -p "$HOME/.config/joyride"
-    echo "Created Joyride scripts directory"
-fi
-
-check_and_install_font() {
-    if ! fc-list | grep -i "Fira Code" > /dev/null; then
-        echo "Installing Fira Code font..."
-        case $PKG_MANAGER in
-            dnf)
-                sudo dnf install -y fira-code-fonts
-                ;;
-            apt)
-                sudo apt update
-                sudo apt install -y fonts-firacode
-                ;;
-        esac
-        # Refresh font cache
-        fc-cache -f
-        echo "Fira Code font installed"
-    else
-        echo "Fira Code font already installed"
+    # Add vim-iced to PATH in .zshrc if not present
+    if ! grep -q "vim-iced/bin" "$HOME/.zshrc"; then
+        echo '
+# Vim-iced PATH
+export PATH=$PATH:~/.vim/plugged/vim-iced/bin' >> "$HOME/.zshrc"
     fi
+
+    echo "Vim-iced setup complete!"
 }
 
-# Setup Emacs if requested
-if [[ "$install_emacs" =~ ^[Yy]$ ]]; then
-    echo "\nSetting up Emacs for Clojure development..."
 
-    # Install Emacs if not present
-    if ! command -v emacs &>/dev/null; then
-        case $PKG_MANAGER in
-            dnf)
-                sudo dnf install -y emacs
-                ;;
-            apt)
-                sudo apt update && sudo apt install -y emacs
-                ;;
-        esac
-        echo "Installed Emacs"
+## 2. Check Vim installation and setup
+if command -v vim &>/dev/null; then
+    echo "Found Vim installation"
+    read -r "?Would you like to set up Vim for Clojure development? [y/N] " setup_vim
+
+    if [[ "$setup_vim" =~ ^[Yy]$ ]]; then
+        if [[ -f "$HOME/.vimrc" ]]; then
+            read -q "REPLY?Existing .vimrc found. Would you like to back it up and install new configuration? (y/n) "
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                cp "$HOME/.vimrc" "$HOME/.vimrc.bak"
+                echo "Backed up existing .vimrc to $HOME/.vimrc.bak"
+                setup_vim_iced
+            else
+                echo "Keeping existing Vim configuration"
+            fi
+        else
+            echo "No existing Vim configuration found. Setting up new configuration..."
+            setup_vim_iced
+        fi
     fi
-
-    # Check and install Fira Code font
-    check_and_install_font
-
-    # Backup existing Emacs configuration
-    [[ -d "$HOME/.emacs.d" ]] && mv "$HOME/.emacs.d" "$HOME/.emacs.d.bak"
-
-    # Install Spacemacs and Practicalli configuration
-    git clone https://github.com/syl20bnr/spacemacs "$HOME/.emacs.d"
-    git clone https://github.com/practicalli/spacemacs-config.git "$HOME/.spacemacs.d"
-    echo "Installed Spacemacs and Practicalli configuration"
+else
+    echo "Vim is not installed"
 fi
 
-# Error if no editors were set up
-if [[ "$has_vscode" == "false" ]] && [[ ! "$install_emacs" =~ ^[Yy]$ ]]; then
-    echo "Error: No editors were configured. Please install either VSCode or Emacs and run the script again."
-    exit 1
+## 3. Ask about VSCode setup
+read -r "?Would you like to setup VSCode with Calva and Joyride? [y/N] " setup_vscode
+
+if [[ "$setup_vscode" =~ ^[Yy]$ ]]; then
+    if command -v code &>/dev/null; then
+        echo "\nSetting up VSCode for Clojure development..."
+
+        # Define VSCode configuration paths
+        vscode_config="$HOME/.config/Code/User"
+
+        # Check if VSCode is properly installed
+        if [[ ! -d "$vscode_config" ]]; then
+            echo "Warning: VSCode config directory not found. Is VSCode installed correctly?"
+            exit 1
+        fi
+
+        # Install or verify VSCode extensions
+        for ext in "betterthantomorrow.calva" "betterthantomorrow.joyride"; do
+            if is_extension_installed "$ext"; then
+                echo "$ext extension is already installed"
+            else
+                if ! code --install-extension "$ext"; then
+                    echo "Failed to install $ext extension"
+                    exit 1
+                fi
+                echo "Installed $ext extension"
+            fi
+        done
+
+        # Setup Joyride scripts directory
+        mkdir -p "$HOME/.config/joyride"
+        echo "Created Joyride scripts directory"
+    else
+        echo "VSCode is not installed. Please install it first."
+        exit 1
+    fi
 fi
 
+## 5. Setup deps-new
 # Prompt for GitHub username for deps-new setup
 echo "\nSetting up deps-new template..."
 
@@ -277,6 +275,7 @@ EOF
 echo "Added deps-new function to .zshrc"
 fi
 
+## 6. Cleanup
 # Function to clean up temporary directories
 cleanup() {
     local -a dirs
@@ -292,62 +291,7 @@ cleanup() {
 # Set up trap to ensure cleanup on script exit
 trap 'cleanup "$HOME/vscode-calva-setup" "$HOME/dot-clojure"' EXIT
 
-# Check for VSCode installation
-if command -v code &>/dev/null; then
-    echo "\nSetting up VSCode for Clojure development..."
-
-    # Define VSCode configuration paths
-    vscode_config="$HOME/.config/Code/User"
-
-    # Check if VSCode is properly installed
-    if [[ ! -d "$vscode_config" ]]; then
-        echo "Warning: VSCode config directory not found. Is VSCode installed correctly?"
-        exit 1
-    fi
-
-    # Install or verify VSCode extensions
-    for ext in "betterthantomorrow.calva" "betterthantomorrow.joyride"; do
-        if is_extension_installed "$ext"; then
-            echo "$ext extension is already installed"
-        else
-            if ! code --install-extension "$ext"; then
-                echo "Failed to install $ext extension"
-                exit 1
-            fi
-            echo "Installed $ext extension"
-        fi
-    done
-
-    # Setup Joyride scripts directory
-    mkdir -p "$HOME/.config/joyride"
-    echo "Created Joyride scripts directory"
-
-else
-    echo "\nSetting up Emacs for Clojure development..."
-
-    # Install Emacs if not present
-    if ! command -v emacs &>/dev/null; then
-        case $PKG_MANAGER in
-            dnf)
-                sudo dnf install -y emacs
-                ;;
-            apt)
-                sudo apt update && sudo apt install -y emacs
-                ;;
-        esac
-        echo "Installed Emacs"
-    fi
-
-    # Backup existing Emacs configuration
-    [[ -d "$HOME/.emacs.d" ]] && mv "$HOME/.emacs.d" "$HOME/.emacs.d.bak"
-
-    # Install Spacemacs and Practicalli configuration
-    git clone https://github.com/syl20bnr/spacemacs "$HOME/.emacs.d"
-    git clone https://github.com/practicalli/spacemacs-config.git "$HOME/.spacemacs.d"
-    echo "Installed Spacemacs and Practicalli configuration"
-fi
-
-# Setup Sean Corfield's Clojure configuration
+## 7. Setup Sean Corfield's Clojure configuration
 echo "\nSetting up Clojure configuration..."
 temp_dir="$HOME/dot-clojure"
 
