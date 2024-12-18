@@ -1,11 +1,10 @@
 # clj-installer
-
 Automated JDK and Clojure installer script for Debian/Ubuntu and RHEL/Fedora Linux systems
 
 ## Features
 - Detects and installs Temurin JDK 21 if no Java is present
 - Installs Clojure in user's home directory (no sudo required)
-- Configures PATH in .zshrc
+- Configures PATH in your shell's run commands file e.g. .zshrc
 - Supports custom installation directory
 
 ## Requirements
@@ -16,9 +15,9 @@ Automated JDK and Clojure installer script for Debian/Ubuntu and RHEL/Fedora Lin
 
 ## Usage
 ```bash
-curl -O https://raw.githubusercontent.com/ai-mindset/clj-installer/main/install-clojure.sh
-chmod +x install-clojure.sh
-./install-clojure.sh
+curl -O https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/clj-install.sh
+chmod +x clj-install.sh
+./clj-install.sh
 ```
 
 ## License
