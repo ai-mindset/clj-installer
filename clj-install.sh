@@ -167,11 +167,28 @@ setup_nvim_conjure() {
     
     # Install Nerd Fonts for Neovim
     if ! fc-list | grep -q "Nerd Font"; then
-        echo "Nerd Fonts are not installed. Installing JetBrainsMono Font..."
-        curl -fsSL https://raw.githubusercontent.com/ryanoasis/nerd-fonts/master/install.sh | sh -s -- JetBrainsMono
+        echo "Nerd Fonts are not installed."
+        local FONT_URL="https://github.com/ryanoasis/nerd-fonts/blob/17dcbea754bced423652ecda54bbd5bf8476b36b/patched-fonts/FiraCode/Regular/FiraCodeNerdFont-Regular.ttf"
+        local FONT_NAME="$(basename ${FONT_URL})"
+        mkdir -p ~/.local/share/fonts
+        cd ~/.local/share/fonts 
+        curl -fLO "${FONT_URL}"
+        echo "Installing ${FONT_NAME}..."
+        if [[ ! -f ~/.config/fontconfig/fonts.conf ]]; then
+            echo "Creating fontconfig directory..."
+            mkdir -p ~/.config/fontconfig
+            # create a fonts.conf file that contains the following 
+            {
+                echo "<?xml version=\"1.0\"?>"                
+                echo "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">"
+                echo "<fontconfig>"
+                echo "  <dir>~/.local/share/fonts</dir>"
+                echo "</fontconfig>"
+            } >> ~/.config/fontconfig/fonts.conf
+        fi
         echo "Refresh font cache..."
         fc-cache -fv
-        echo "Nerd Fonts installed!"
+        echo "Nerd Font ${FONT_NAME} installed!"
     fi
 
     echo "Neovim setup complete!"
@@ -231,7 +248,19 @@ fi
 
 ## 6. Setup simple system-wide Clojure configuration
 echo "Setting up Clojure configuration..."
-curl -L -o "$clj_dir/deps.edn" https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/deps.edn
+if [[ -f "$clj_dir/deps.edn" ]]; then
+    echo "deps.edn already exists"
+    read -r "?${GREEN}Would you like to replace your deps.edn with a simple system-wide configuration? [y/N] ${RESET}" replace_deps
+    if [[ "$replace_deps" =~ ^[Yy]$ ]]; then
+        curl -L -o "$clj_dir/deps.edn" https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/deps.edn
+        echo "Replaced deps.edn"
+    else
+        echo "Keeping existing deps.edn"
+    fi
+else 
+    curl -L -o "$clj_dir/deps.edn" https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/deps.edn
+    echo "Installed deps.edn" 
+fi
 
 echo "Restarting $(echo $0)"
 source ~/$RC
