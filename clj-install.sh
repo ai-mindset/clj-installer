@@ -57,8 +57,12 @@
 # License: MIT
 # Repository: https://github.com/mindset/clj-installer
 
+## -1: Colour codes
+GREEN=$(tput setaf 2)
+RESET=$(tput sgr0)
+
 ## 0. Check which shell is used
-RC="$(basename $SHELL)rc"
+RC=".$(basename $SHELL)rc"
 
 ## 1. Check if the distribution is Debian or RHEL based
 if command -v dnf &>/dev/null; then
@@ -105,11 +109,11 @@ if command -v clj >/dev/null 2>&1; then
 else
     # Confirm directory choice
     echo "Default Clojure directory: $HOME/.clojure"
-    read -r "?Use different directory? [y/N] " response
+    read -r "?${GREEN}Use different directory? [y/N] ${RESET}" response
 
     # Create .clojure directory
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        read -r "?Enter new directory path: " clj_dir
+        read -r "?${GREEN}Enter new directory path: ${RESET}" clj_dir
         echo "Creating Clojure directory..."
         mkdir -p "$clj_dir"
         cd "$clj_dir" || exit 1
@@ -144,8 +148,7 @@ else
     echo "Clojure installation complete!"
 fi
 
-
-echo "\nChecking editor setup..."
+echo "Checking editor setup..."
 is_vscode_extension_installed() {
     local extension_id="$1"
     code --list-extensions | grep -q "^${extension_id}$"
@@ -161,6 +164,15 @@ setup_nvim_conjure() {
         return 1
     }
     nvim +PlugInstall +qall
+    
+    # Install Nerd Fonts for Neovim
+    if ! fc-list | grep -q "Nerd Font"; then
+        echo "Nerd Fonts are not installed. Installing JetBrainsMono Font..."
+        curl -fsSL https://raw.githubusercontent.com/ryanoasis/nerd-fonts/master/install.sh | sh -s -- JetBrainsMono
+        echo "Refresh font cache..."
+        fc-cache -fv
+        echo "Nerd Fonts installed!"
+    fi
 
     echo "Neovim setup complete!"
 }
@@ -168,7 +180,7 @@ setup_nvim_conjure() {
 ## 4. Check Neovim installation and setup
 if command -v nvim &>/dev/null; then
     echo "Neovim is already installed 👍"
-    read -r "?Would you like to set up Neovim for Clojure development? [y/N] " setup_nvim
+    read -r "?${GREEN}Would you like to set up Neovim for Clojure development? [y/N] ${RESET}" setup_nvim
 
     if [[ "$setup_nvim" =~ ^[Yy]$ ]]; then
         echo "Setting up your new Neovim configuration..."
@@ -179,11 +191,12 @@ else
 fi
 
 ## 5. Ask about VSCode setup
-read -r "?Would you like to setup VSCode with Calva and Joyride? [y/N] " setup_vscode
+read -r "?${GREEN}Would you like to setup VSCode with Calva and Joyride? [y/N] ${RESET}" setup_vscode
 
 if [[ "$setup_vscode" =~ ^[Yy]$ ]]; then
     if command -v code &>/dev/null; then
-        echo "\nSetting up VSCode for Clojure development..."
+        echo "Setting up VSCode for Clojure development..."
+        haven:
 
         # Define VSCode configuration paths
         vscode_config="$HOME/.config/Code/User"
@@ -217,9 +230,9 @@ if [[ "$setup_vscode" =~ ^[Yy]$ ]]; then
 fi
 
 ## 6. Setup simple system-wide Clojure configuration
-echo "\nSetting up Clojure configuration..."
+echo "Setting up Clojure configuration..."
 curl -L -o "$clj_dir/deps.edn" https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/deps.edn
 
 echo "Restarting $(echo $0)"
 source ~/$RC
-echo "\nSetup complete!"
+echo "Setup complete!"
