@@ -2,14 +2,8 @@
 
 # Clojure Development Environment Setup Script
 #
-# This script sets up a complete Clojure development environment on Linux systems,
-# including JDK, Clojure, and editor configuration.
-#
-# Features:
-#   - Installs Temurin JDK 21 if no Java is present
-#   - Installs latest stable Clojure
-#   - Configures either VSCode or Neovim as the development environment
-#   - Installs a simple system-wide deps.edn configuration
+# This script sets up a complete Clojure development environment on Unix systems,
+# including JDK, Clojure, a simple deps.edn, Leiningen and editor configuration.
 #
 # Requirements:
 #   - Linux (Debian/Ubuntu or RHEL/Fedora)
