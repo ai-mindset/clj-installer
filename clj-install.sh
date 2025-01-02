@@ -2,14 +2,8 @@
 
 # Clojure Development Environment Setup Script
 #
-# This script sets up a complete Clojure development environment on Linux systems,
-# including JDK, Clojure, and editor configuration.
-#
-# Features:
-#   - Installs Temurin JDK 21 if no Java is present
-#   - Installs latest stable Clojure
-#   - Configures either VSCode or Neovim as the development environment
-#   - Installs a simple system-wide deps.edn configuration
+# This script sets up a complete Clojure development environment on Unix systems,
+# including JDK, Clojure, a simple deps.edn, Leiningen and editor configuration.
 #
 # Requirements:
 #   - Linux (Debian/Ubuntu or RHEL/Fedora)
@@ -34,6 +28,8 @@
 #   3. Set up your preferred editor:
 #      - For Neovim: installs a Neovim setup including Conjure 
 #      - For VSCode: installs Calva and Joyride extensions + configurations
+#   4. Set up a simple system-wide deps.edn configurations
+#   5. Install Leiningen if not already installed
 #
 # Editor Setup Details:
 #   Neovim:
@@ -59,6 +55,7 @@
 
 ## -1: Colour codes
 GREEN=$(tput setaf 2)
+BLUE=$(tput setaf 4)
 RESET=$(tput sgr0)
 
 ## 0. Check which shell is used
@@ -109,11 +106,11 @@ if command -v clj >/dev/null 2>&1; then
 else
     # Confirm directory choice
     echo "Default Clojure directory: $HOME/.clojure"
-    read -r "?${GREEN}Use different directory? [y/N] ${RESET}" response
+    read -r "?${BLUE}Use different directory? [y/N] ${RESET}" response
 
     # Create .clojure directory
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        read -r "?${GREEN}Enter new directory path: ${RESET}" clj_dir
+        read -r "?${BLUE}Enter new directory path: ${RESET}" clj_dir
         echo "Creating Clojure directory..."
         mkdir -p "$clj_dir"
         cd "$clj_dir" || exit 1
@@ -197,7 +194,7 @@ setup_nvim_conjure() {
 ## 4. Check Neovim installation and setup
 if command -v nvim &>/dev/null; then
     echo "Neovim is already installed 👍"
-    read -r "?${GREEN}Would you like to set up Neovim for Clojure development? [y/N] ${RESET}" setup_nvim
+    read -r "?${BLUE}Would you like to set up Neovim for Clojure development? [y/N] ${RESET}" setup_nvim
 
     if [[ "$setup_nvim" =~ ^[Yy]$ ]]; then
         echo "Setting up your new Neovim configuration..."
@@ -208,7 +205,7 @@ else
 fi
 
 ## 5. Ask about VSCode setup
-read -r "?${GREEN}Would you like to setup VSCode with Calva and Joyride? [y/N] ${RESET}" setup_vscode
+read -r "?${BLUE}Would you like to setup VSCode with Calva and Joyride? [y/N] ${RESET}" setup_vscode
 
 if [[ "$setup_vscode" =~ ^[Yy]$ ]]; then
     if command -v code &>/dev/null; then
@@ -250,7 +247,7 @@ fi
 echo "Setting up Clojure configuration..."
 if [[ -f "$clj_dir/deps.edn" ]]; then
     echo "deps.edn already exists"
-    read -r "?${GREEN}Would you like to replace your deps.edn with a simple system-wide configuration? [y/N] ${RESET}" replace_deps
+    read -r "?${BLUE}Would you like to replace your deps.edn with a simple system-wide configuration? [y/N] ${RESET}" replace_deps
     if [[ "$replace_deps" =~ ^[Yy]$ ]]; then
         curl -L -o "$clj_dir/deps.edn" https://raw.githubusercontent.com/ai-mindset/clj-installer/refs/heads/main/deps.edn
         echo "Replaced deps.edn"
@@ -262,6 +259,16 @@ else
     echo "Installed deps.edn" 
 fi
 
-echo "Restarting $(echo $0)"
-source ~/$RC
-echo "Setup complete!"
+## 7. Install lein if not already Installed
+if ! command -v lein &>/dev/null; then
+    echo "Installing Leiningen..."
+    curl -O https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
+    chmod +x lein
+    mv lein $clj_dir/bin
+    echo "Leiningen installed!"
+fi
+
+hash-r ~/$RC
+echo "${GREEN}Setup complete!${RESET}"
+echo "${GREEN}Happy coding! 🚀${RESET}"
+echo "${GREEN}Please restart your terminal to apply changes${RESET}"
