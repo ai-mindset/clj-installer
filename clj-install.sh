@@ -268,7 +268,7 @@ if ! command -v lein &>/dev/null; then
     echo "Leiningen installed!"
 fi
 
-hash-r ~/$RC
+hash -r ~/$RC
 echo "${GREEN}Setup complete!${RESET}"
 echo "${GREEN}Happy coding! 🚀${RESET}"
 echo "${GREEN}Please restart your terminal to apply changes${RESET}"
